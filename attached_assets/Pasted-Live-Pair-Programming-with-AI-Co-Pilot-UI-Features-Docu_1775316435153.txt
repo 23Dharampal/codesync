@@ -1,0 +1,166 @@
+Live Pair Programming with AI Co-Pilot — UI Features Document
+Pages / Screens
+1. Landing Page
+Hero section with tagline "Code Together, Build Faster"
+Two buttons: Create Room and Join Room
+Join Room has an input field for room code
+Simple animated background showing floating code snippets
+Feature highlights section (3 cards): Live Editor, Voice Call, AI Co-Pilot
+Dark theme by default
+2. Room Page (Main App)
+This is the core screen. Split into 4 zones:
+
+
+┌─────────────────────────────────────────────────────┐
+│                    TOP BAR                           │
+├──────────┬──────────────────────────────┬────────────┤
+│          │                              │            │
+│  FILE    │      CODE EDITOR             │  AI PANEL  │
+│  TREE    │                              │            │
+│          │                              │            │
+│          │                              │            │
+├──────────┴──────────────────────────────┴────────────┤
+│                  BOTTOM BAR                          │
+└─────────────────────────────────────────────────────┘
+Zone Breakdown
+Top Bar
+Room name on the left (editable on click)
+Room code with a Copy Link button next to it
+Connected users avatars (circles with initials + color)
+Green dot = online
+Hovering shows their name
+Language selector dropdown (Python, JS, TS, Go, Rust etc.)
+Voice button — mic icon, click to join voice call
+Screen Share button
+End Session button (red, right side)
+Connection status indicator (green dot = connected)
+File Tree (Left Panel)
+List of files in the session
+Click file to open in editor
++ button to add new file
+Right click file → rename, delete
+Currently open file is highlighted
+File icons based on extension (.py, .js, .ts etc.)
+Collapsible panel — can hide to give more space to editor
+Code Editor (Center — Biggest Zone)
+Monaco Editor (VS Code look and feel)
+Live cursors — each user has a colored cursor
+Cursor has a small label with user's name above it
+Different color per user (blue, orange, green etc.)
+Live selections — if user selects code, selection is highlighted in their color
+Line numbers on the left
+Syntax highlighting per language
+Current line highlight
+AI suggestion inline — subtle highlighted line when AI suggests a change
+Small lightbulb icon on the left of the line
+Click lightbulb → see suggestion in a small popup
+Popup has Accept and Dismiss buttons
+Minimap on the right side (scrollable overview)
+Bottom of editor shows: language, line:column, spaces/tabs, encoding
+AI Panel (Right Panel)
+Header: "AI Co-Pilot" with a small animated pulse dot (shows AI is watching)
+Suggestions Feed — scrollable list of AI messages
+Each message has:
+AI avatar (robot icon)
+Timestamp
+Message text
+Optional code block with syntax highlighting
+Apply button if AI suggests a code change
+Copy button on code blocks
+Message types styled differently:
+Warning (yellow left border) → bug or risk detected
+Suggestion (blue left border) → improvement idea
+Info (gray left border) → explanation
+Error (red left border) → critical issue
+Ask AI input at the bottom of the panel
+Text input: "Ask anything about the code..."
+Send button
+Keyboard shortcut hint (Ctrl+Enter)
+AI Status bar at very top of panel
+"Analyzing..." with spinner when processing
+"Watching" when idle
+Toggle button to collapse/expand panel
+Bottom Bar
+Left side: Chat toggle button (opens chat drawer)
+Center: Voice call controls when active
+Mute / Unmute button
+Speaker on/off
+Leave call button (red)
+Who is speaking (name lights up)
+Right side: Session Timer (how long session has been running)
+Chat Drawer (Slides up from bottom)
+Opens when Chat button clicked
+Full width, covers bottom 30% of screen
+Message list (user name + avatar + message + time)
+Your messages on right, others on left
+Input field at bottom with send button
+Can @mention AI: "@ai explain this function"
+Emoji button
+Dismiss by clicking X or Chat button again
+Voice Call UI (When Active)
+Top bar Voice button turns green
+Small floating bar appears at bottom center:
+
+🎙 Alice  🔇 Bob  [Mute] [Leave]
+Speaking user's avatar pulses with green ring
+Muted user has a red mic icon on their avatar
+Screen Share UI (When Active)
+Shared screen appears as a small preview in top-right corner of editor
+Click preview to expand to full screen overlay
+Overlay has X to close
+"Alice is sharing" label on the preview
+Modals
+Create Room Modal
+Input: Room name (optional)
+Input: Your display name
+Color picker for your cursor color
+Create Room button
+Shows room code after creation with copy button
+Join Room Modal
+Input: Room code
+Input: Your display name
+Color picker for your cursor color
+Join button
+Session End Modal (when clicking End Session)
+"Session Summary" heading
+AI-generated bullet points of what was built
+Duration of session
+Files created/modified list
+Download Summary button
+Save to History button
+Close button
+Settings Panel (Sidebar slide-in)
+Editor font size slider
+Theme toggle (Dark / Light / High Contrast)
+Keybindings (VS Code / Vim / Emacs)
+AI suggestions toggle (on/off)
+AI suggestion delay (instant / 2s / 5s)
+Notification sounds toggle
+Language preference
+Empty / Loading States
+Room loading → centered spinner with "Connecting to room..."
+No files yet → center of editor shows "Create your first file →"
+AI panel empty → "AI is watching your code. Start typing..."
+No users yet → "Share the room link to invite someone"
+Notifications (Toast — top right corner)
+User joined → "Bob joined the room" (green)
+User left → "Bob left the room" (gray)
+AI found something → "AI has a suggestion" (blue)
+Connection lost → "Reconnecting..." (yellow)
+Session saved → "Session saved" (green)
+Color System
+
+Background      #1e1e2e   (dark navy)
+Editor bg       #181825   (darker)
+Panel bg        #242436   (slightly lighter)
+Top/Bottom bar  #13131f   (darkest)
+Accent blue     #7aa2f7   (user A cursor, links)
+Accent orange   #ff9e64   (user B cursor)
+Accent green    #9ece6a   (online, success)
+Accent red      #f7768e   (errors, end session)
+Accent yellow   #e0af68   (warnings)
+Text primary    #c0caf5   (main text)
+Text secondary  #565f89   (muted text)
+Responsive Behavior
+Below 768px → hide file tree, collapse AI panel into bottom tab
+Below 480px → mobile not supported, show "Use on desktop" message
