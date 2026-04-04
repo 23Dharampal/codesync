@@ -1,40 +1,91 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Copy, Mic, MonitorUp, Settings, PhoneOff, Check, ChevronLeft, ChevronRight, FileCode2, FileJson, FileText, Plus, MessageSquare, MicOff, Volume2, X, Send, Bot, Lightbulb } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Copy, Mic, MonitorUp, Settings, PhoneOff, Check, ChevronLeft, ChevronRight,
+  FileCode2, FileJson, FileText, Plus, MessageSquare, MicOff, Volume2, X,
+  Send, Bot, Lightbulb, Zap, AlertTriangle, Info, ShieldAlert
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+
+const CYAN = "hsl(186 100% 50%)";
+const MAGENTA = "hsl(300 100% 60%)";
+const GREEN = "hsl(120 100% 50%)";
+const YELLOW = "hsl(55 100% 60%)";
+const RED = "hsl(0 100% 60%)";
+const BG_DARK = "hsl(240 30% 3%)";
+const PANEL = "hsl(240 25% 8%)";
+const BAR = "hsl(240 30% 5%)";
+
+const NeonDot = ({ color = GREEN, size = 8 }: { color?: string; size?: number }) => (
+  <span
+    className="inline-block rounded-full flex-shrink-0"
+    style={{
+      width: size, height: size,
+      background: color,
+      boxShadow: `0 0 6px ${color}, 0 0 12px ${color}55`,
+      animation: "pulse-green 2s ease-in-out infinite"
+    }}
+  />
+);
+
+const NeonTag = ({ children, color = CYAN }: { children: React.ReactNode; color?: string }) => (
+  <span
+    className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 border"
+    style={{ color, borderColor: `${color}44`, background: `${color}0d` }}
+  >
+    {children}
+  </span>
+);
 
 export default function Room() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isEndSessionOpen, setIsEndSessionOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showAISuggestion, setShowAISuggestion] = useState(false);
+  const [chatInput, setChatInput] = useState("");
 
   useEffect(() => {
-    toast({
-      title: "Bob joined the room",
-      className: "bg-green-500/20 text-green-500 border-green-500/50",
-      duration: 3000,
-    });
-
-    const timer = setTimeout(() => {
+    const t1 = setTimeout(() => {
       toast({
-        title: "AI has a suggestion",
-        className: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+        title: "// OPERATIVE CONNECTED",
+        description: "bob_runner has joined the session",
+        className: "rounded-none border font-mono text-xs",
+        style: {
+          background: "hsl(240 25% 8%)",
+          borderColor: "hsl(120 100% 50% / 0.5)",
+          color: "hsl(120 100% 50%)",
+          boxShadow: "0 0 20px hsl(120 100% 50% / 0.2)",
+        } as React.CSSProperties,
+        duration: 3500,
+      });
+    }, 800);
+    const t2 = setTimeout(() => {
+      toast({
+        title: "// NEURAL AI SIGNAL",
+        description: "Anomaly detected on line 12",
+        className: "rounded-none border font-mono text-xs",
+        style: {
+          background: "hsl(240 25% 8%)",
+          borderColor: "hsl(186 100% 50% / 0.5)",
+          color: "hsl(186 100% 50%)",
+          boxShadow: "0 0 20px hsl(186 100% 50% / 0.2)",
+        } as React.CSSProperties,
         duration: 4000,
       });
-    }, 3000);
-
-    return () => clearTimeout(timer);
+    }, 4500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [toast]);
 
   const handleCopy = () => {
@@ -43,509 +94,797 @@ export default function Room() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const leaveRoom = () => {
-    setLocation("/");
+  const barStyle: React.CSSProperties = {
+    background: BAR,
+    borderColor: `${CYAN}22`,
+  };
+  const panelStyle: React.CSSProperties = {
+    background: PANEL,
+    borderColor: `${CYAN}22`,
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
-      {/* Mobile Block */}
-      <div className="sm:hidden fixed inset-0 z-50 bg-background flex items-center justify-center p-6 text-center">
-        <p className="text-lg">Use a desktop browser for the best experience</p>
+    <div className="flex flex-col h-screen w-full text-foreground overflow-hidden" style={{ background: BG_DARK }}>
+      {/* Mobile block */}
+      <div
+        className="sm:hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center gap-4"
+        style={{ background: BG_DARK }}
+      >
+        <NeonDot color={RED} size={12} />
+        <p className="text-sm font-mono text-neon-cyan tracking-widest">// DESKTOP REQUIRED</p>
+        <p className="text-xs font-mono text-muted-foreground">This interface requires a large viewport to render correctly.</p>
       </div>
 
-      {/* TOP BAR */}
-      <div className="h-11 bar-bg border-b border-border flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <input 
-            type="text" 
-            defaultValue="Project Alpha" 
-            className="bg-transparent border-none text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary rounded px-1 w-32"
+      {/* ── TOP BAR ── */}
+      <div className="h-11 flex items-center justify-between px-4 shrink-0 border-b relative" style={barStyle}>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(186_100%_50%_/_0.4)] to-transparent" />
+
+        {/* Left: room name + code */}
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            defaultValue="Project Alpha"
+            className="bg-transparent border-none text-sm font-mono font-bold focus:outline-none focus:ring-1 rounded-none px-1 w-32"
+            style={{ color: CYAN, caretColor: CYAN, ringColor: CYAN }}
             data-testid="input-room-name"
           />
-          <div className="flex items-center gap-2 bg-background/50 rounded-md px-2 py-1 border border-border">
-            <span className="text-xs font-mono text-muted-foreground">ROOM-7A3X</span>
-            <button onClick={handleCopy} className="text-muted-foreground hover:text-foreground" data-testid="btn-copy-room-code">
-              {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+          <div
+            className="flex items-center gap-2 px-2 py-1 border font-mono text-xs cursor-pointer hover:opacity-80 transition-opacity"
+            style={{ background: `${CYAN}0d`, borderColor: `${CYAN}44`, color: CYAN }}
+          >
+            <span className="tracking-widest">ROOM-7A3X</span>
+            <button onClick={handleCopy} data-testid="btn-copy-room-code">
+              {copied ? <Check className="w-3 h-3" style={{ color: GREEN }} /> : <Copy className="w-3 h-3" />}
             </button>
           </div>
-          <div className="flex items-center gap-1.5 ml-4">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-xs text-muted-foreground">Connected</span>
+          <div className="flex items-center gap-1.5">
+            <NeonDot color={GREEN} size={6} />
+            <span className="text-[10px] font-mono" style={{ color: `${GREEN}aa` }}>SYNCED</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger>
-              <div className="relative">
-                <div className="w-7 h-7 rounded-full bg-blue flex items-center justify-center text-xs font-bold text-white border-2 border-background z-10">AL</div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>Alice</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger>
-              <div className="relative -ml-3">
-                <div className="w-7 h-7 rounded-full bg-orange flex items-center justify-center text-xs font-bold text-white border-2 border-background">BO</div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>Bob</TooltipContent>
-          </Tooltip>
+        {/* Center: user avatars */}
+        <div className="flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          {[
+            { initials: "AL", color: CYAN, name: "alice_zero" },
+            { initials: "BO", color: MAGENTA, name: "bob_runner" },
+          ].map((u, i) => (
+            <Tooltip key={u.name}>
+              <TooltipTrigger>
+                <div className="relative w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-mono font-bold cursor-default"
+                  style={{
+                    background: `${u.color}22`,
+                    borderColor: u.color,
+                    color: u.color,
+                    boxShadow: `0 0 10px ${u.color}66`,
+                    marginLeft: i > 0 ? "-6px" : 0
+                  }}
+                >
+                  {u.initials}
+                  <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2" style={{ background: GREEN, borderColor: BG_DARK, boxShadow: `0 0 4px ${GREEN}` }} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="font-mono text-xs rounded-none">{u.name}</TooltipContent>
+            </Tooltip>
+          ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: controls */}
+        <div className="flex items-center gap-2">
           <Select defaultValue="python">
-            <SelectTrigger className="w-32 h-7 text-xs bg-background/50 border-border" data-testid="select-language">
+            <SelectTrigger
+              className="w-28 h-7 text-[11px] font-mono border rounded-none"
+              style={{ background: `${CYAN}0a`, borderColor: `${CYAN}33`, color: CYAN }}
+              data-testid="select-language"
+            >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="python">Python</SelectItem>
-              <SelectItem value="javascript">JavaScript</SelectItem>
-              <SelectItem value="typescript">TypeScript</SelectItem>
-              <SelectItem value="go">Go</SelectItem>
-              <SelectItem value="rust">Rust</SelectItem>
+            <SelectContent className="font-mono text-xs rounded-none" style={{ background: PANEL, borderColor: `${CYAN}33` }}>
+              {["python", "javascript", "typescript", "go", "rust"].map(l => (
+                <SelectItem key={l} value={l}>{l.toUpperCase()}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" data-testid="btn-voice-toggle">
-            <Mic className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" data-testid="btn-screen-share">
-            <MonitorUp className="w-4 h-4" />
-          </Button>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" data-testid="btn-settings">
-                <Settings className="w-4 h-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="panel-bg border-l-border text-foreground">
-              <SheetHeader>
-                <SheetTitle>Settings</SheetTitle>
-              </SheetHeader>
-              <div className="py-6 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm">Font Size</label>
-                  <input type="range" className="w-full accent-primary" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm">Theme</label>
-                  <Select defaultValue="dark">
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent><SelectItem value="dark">Dark</SelectItem></SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
 
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            className="h-7 text-xs font-semibold px-3 ml-2"
-            onClick={() => setIsEndSessionOpen(true)}
+          {[
+            { icon: <Mic className="w-3.5 h-3.5" />, label: "Voice", testId: "btn-voice-toggle" },
+            { icon: <MonitorUp className="w-3.5 h-3.5" />, label: "Share", testId: "btn-screen-share" },
+          ].map(btn => (
+            <button
+              key={btn.label}
+              className="w-7 h-7 flex items-center justify-center border transition-all"
+              style={{ borderColor: `${CYAN}33`, color: `${CYAN}88`, background: "transparent" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = CYAN; (e.currentTarget as HTMLElement).style.borderColor = `${CYAN}77`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 10px ${CYAN}33`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = `${CYAN}88`; (e.currentTarget as HTMLElement).style.borderColor = `${CYAN}33`; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              data-testid={btn.testId}
+            >
+              {btn.icon}
+            </button>
+          ))}
+
+          <button
+            className="w-7 h-7 flex items-center justify-center border transition-all"
+            style={{ borderColor: `${MAGENTA}33`, color: `${MAGENTA}88`, background: "transparent" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = MAGENTA; (e.currentTarget as HTMLElement).style.borderColor = `${MAGENTA}77`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 10px ${MAGENTA}33`; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = `${MAGENTA}88`; (e.currentTarget as HTMLElement).style.borderColor = `${MAGENTA}33`; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            onClick={() => setSettingsOpen(true)}
+            data-testid="btn-settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            className="px-3 h-7 text-[11px] font-mono tracking-wider border transition-all"
+            style={{ background: `${RED}0d`, borderColor: `${RED}66`, color: RED, boxShadow: `0 0 8px ${RED}22` }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${RED}22`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 16px ${RED}44`; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${RED}0d`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 8px ${RED}22`; }}
+            onClick={() => setEndOpen(true)}
             data-testid="btn-end-session"
           >
-            End Session
-          </Button>
+            TERMINATE
+          </button>
         </div>
       </div>
 
-      {/* MIDDLE CONTENT */}
+      {/* ── MIDDLE ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT PANEL */}
+
+        {/* LEFT: File Tree */}
         <AnimatePresence initial={false}>
           {leftOpen && (
-            <motion.div 
+            <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 220, opacity: 1 }}
+              animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="panel-bg border-r border-border shrink-0 flex flex-col"
+              transition={{ duration: 0.2 }}
+              className="shrink-0 flex flex-col border-r overflow-hidden"
+              style={panelStyle}
             >
-              <div className="p-2 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Explorer</span>
+              <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: `${CYAN}22` }}>
+                <span className="text-[9px] font-mono tracking-widest" style={{ color: `${CYAN}66` }}>// FILE_SYSTEM</span>
                 <div className="flex gap-1">
-                  <button className="p-1 hover:bg-background/50 rounded" data-testid="btn-new-file"><Plus className="w-3.5 h-3.5" /></button>
-                  <button className="p-1 hover:bg-background/50 rounded" onClick={() => setLeftOpen(false)} data-testid="btn-collapse-left"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                  <button
+                    className="p-1 transition-colors"
+                    style={{ color: `${CYAN}66` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+                    data-testid="btn-new-file"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    className="p-1 transition-colors"
+                    style={{ color: `${CYAN}66` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+                    onClick={() => setLeftOpen(false)}
+                    data-testid="btn-collapse-left"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <div className="p-2 space-y-0.5 text-sm overflow-y-auto">
-                <div className="flex items-center gap-2 px-2 py-1.5 bg-primary/20 text-primary rounded cursor-pointer" data-testid="file-main-py">
-                  <FileCode2 className="w-4 h-4 text-blue-400" />
-                  <span>main.py</span>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-background/50 rounded cursor-pointer text-muted-foreground">
-                  <FileCode2 className="w-4 h-4 text-blue-400" />
-                  <span>utils.py</span>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-background/50 rounded cursor-pointer text-muted-foreground">
-                  <FileCode2 className="w-4 h-4 text-green-400" />
-                  <span>test_main.py</span>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-background/50 rounded cursor-pointer text-muted-foreground">
-                  <FileText className="w-4 h-4" />
-                  <span>README.md</span>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-background/50 rounded cursor-pointer text-muted-foreground">
-                  <FileJson className="w-4 h-4 text-yellow-400" />
-                  <span>package.json</span>
-                </div>
+
+              <div className="p-2 space-y-0.5 text-xs font-mono overflow-y-auto">
+                {[
+                  { name: "main.py", icon: <FileCode2 className="w-3.5 h-3.5" />, color: CYAN, active: true },
+                  { name: "utils.py", icon: <FileCode2 className="w-3.5 h-3.5" />, color: CYAN, active: false },
+                  { name: "test_main.py", icon: <FileCode2 className="w-3.5 h-3.5" />, color: GREEN, active: false },
+                  { name: "README.md", icon: <FileText className="w-3.5 h-3.5" />, color: MAGENTA, active: false },
+                  { name: "config.json", icon: <FileJson className="w-3.5 h-3.5" />, color: YELLOW, active: false },
+                ].map(f => (
+                  <div
+                    key={f.name}
+                    className="flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-all"
+                    style={f.active
+                      ? { background: `${CYAN}15`, color: CYAN, borderLeft: `2px solid ${CYAN}`, boxShadow: `inset 0 0 10px ${CYAN}08` }
+                      : { color: "hsl(220 30% 50%)" }
+                    }
+                    onMouseEnter={e => { if (!f.active) { (e.currentTarget as HTMLElement).style.background = `${CYAN}08`; (e.currentTarget as HTMLElement).style.color = "hsl(195 80% 80%)"; } }}
+                    onMouseLeave={e => { if (!f.active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "hsl(220 30% 50%)"; } }}
+                    data-testid={`file-${f.name.replace(".", "-")}`}
+                  >
+                    <span style={{ color: f.color }}>{f.icon}</span>
+                    <span>{f.name}</span>
+                  </div>
+                ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Closed Left Panel Tab */}
         {!leftOpen && (
-          <div className="w-10 panel-bg border-r border-border shrink-0 flex flex-col items-center py-2">
-            <button className="p-2 hover:bg-background/50 rounded text-muted-foreground hover:text-foreground" onClick={() => setLeftOpen(true)} data-testid="btn-expand-left">
-              <ChevronRight className="w-4 h-4" />
+          <div className="w-9 shrink-0 flex flex-col items-center py-2 border-r" style={panelStyle}>
+            <button
+              className="p-1.5 transition-colors"
+              style={{ color: `${CYAN}66` }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+              onClick={() => setLeftOpen(true)}
+              data-testid="btn-expand-left"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
-            <div className="mt-4 flex flex-col gap-4 text-muted-foreground">
-              <FileCode2 className="w-5 h-5" />
-            </div>
           </div>
         )}
 
-        {/* EDITOR */}
-        <div className="flex-1 flex flex-col min-w-0 editor-bg relative">
-          {/* Editor Tabs */}
-          <div className="flex h-9 bg-[#1e1e2e] border-b border-border shrink-0">
-            <div className="px-4 flex items-center gap-2 bg-[#181825] border-r border-border text-sm text-foreground cursor-pointer">
-              <FileCode2 className="w-4 h-4 text-blue-400" />
+        {/* CENTER: Editor */}
+        <div className="flex-1 flex flex-col min-w-0 relative" style={{ background: BG_DARK }}>
+          {/* Editor tabs */}
+          <div className="flex h-8 border-b shrink-0" style={{ background: PANEL, borderColor: `${CYAN}22` }}>
+            <div
+              className="px-3 flex items-center gap-2 border-r border-b-2 text-xs font-mono cursor-pointer"
+              style={{ background: BG_DARK, borderRightColor: `${CYAN}22`, borderBottomColor: CYAN, color: CYAN }}
+            >
+              <FileCode2 className="w-3.5 h-3.5" />
               main.py
-              <button className="ml-2 hover:bg-white/10 rounded p-0.5"><X className="w-3 h-3" /></button>
+              <button className="ml-1 opacity-50 hover:opacity-100">
+                <X className="w-2.5 h-2.5" />
+              </button>
             </div>
-            <div className="px-4 flex items-center gap-2 border-r border-border text-sm text-muted-foreground hover:bg-[#181825]/50 cursor-pointer">
-              <FileCode2 className="w-4 h-4 text-blue-400" />
+            <div
+              className="px-3 flex items-center gap-2 border-r text-xs font-mono cursor-pointer transition-colors"
+              style={{ borderRightColor: `${CYAN}22`, color: "hsl(220 30% 50%)" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "hsl(195 80% 80%)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "hsl(220 30% 50%)"}
+            >
+              <FileCode2 className="w-3.5 h-3.5" />
               utils.py
             </div>
           </div>
-          
-          {/* Code Area */}
+
+          {/* Code area */}
           <div className="flex-1 flex overflow-hidden font-mono text-sm relative">
             {/* Line numbers */}
-            <div className="w-12 shrink-0 bg-[#181825] border-r border-border/50 text-right pr-4 py-4 text-muted-foreground/50 select-none flex flex-col">
-              {[...Array(30)].map((_, i) => (
+            <div
+              className="w-12 shrink-0 border-r text-right pr-3 py-4 select-none flex flex-col text-xs"
+              style={{ background: `${BG_DARK}dd`, borderColor: `${CYAN}15`, color: "hsl(220 25% 30%)" }}
+            >
+              {[...Array(28)].map((_, i) => (
                 <div key={i} className="leading-6">{i + 1}</div>
               ))}
             </div>
-            
-            {/* Fake minimap */}
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-background/30 border-l border-border/30 opacity-50 z-10 pointer-events-none hidden md:block">
-               <div className="absolute top-8 left-2 w-10 h-1 bg-purple-500/20 rounded"></div>
-               <div className="absolute top-10 left-2 w-12 h-1 bg-blue-500/20 rounded"></div>
-               <div className="absolute top-12 left-2 w-8 h-1 bg-green-500/20 rounded"></div>
-               <div className="absolute top-16 left-2 w-12 h-1 bg-purple-500/20 rounded"></div>
-               <div className="absolute top-24 left-2 w-10 h-1 bg-yellow-500/20 rounded"></div>
-               <div className="absolute top-32 left-2 w-12 h-8 bg-orange/20 rounded border border-orange/50"></div>
+
+            {/* Minimap */}
+            <div
+              className="absolute right-0 top-0 bottom-0 w-14 border-l z-10 pointer-events-none hidden md:block opacity-60"
+              style={{ background: `${BG_DARK}cc`, borderColor: `${CYAN}15` }}
+            >
+              {[8, 12, 16, 20, 25, 30, 40, 48, 55, 65, 80, 90].map((top, i) => (
+                <div key={i} className="absolute left-2 h-0.5 rounded" style={{ top, width: `${40 + (i % 5) * 8}%`, background: i % 3 === 0 ? `${CYAN}30` : i % 3 === 1 ? `${MAGENTA}25` : `${GREEN}20` }} />
+              ))}
+              <div className="absolute left-1 right-1 h-10 border rounded-none" style={{ top: 22, borderColor: `${CYAN}40`, background: `${CYAN}08` }} />
             </div>
 
             {/* Code content */}
-            <div className="flex-1 py-4 pl-4 overflow-auto whitespace-pre relative">
-              <div className="leading-6">
-                <span className="text-purple-400">def</span> <span className="text-blue-400">fibonacci</span>(n: <span className="text-yellow-400">int</span>) -&gt; <span className="text-yellow-400">int</span>:
+            <div className="flex-1 py-4 pl-4 pr-16 overflow-auto leading-6 relative">
+
+              {/* Line 1 */}
+              <div><span style={{ color: MAGENTA }}>def</span> <span style={{ color: CYAN }}>fibonacci</span>(<span style={{ color: "hsl(195 80% 92%)" }}>n</span>: <span style={{ color: YELLOW }}>int</span>) -&gt; <span style={{ color: YELLOW }}>int</span>:</div>
+              {/* Line 2 */}
+              <div style={{ color: GREEN }}>{"    "}"""Calculate the nth Fibonacci number."""</div>
+              {/* Line 3 */}
+              <div className="relative">
+                {"    "}<span style={{ color: MAGENTA }}>if</span> n &lt;= <span style={{ color: YELLOW }}>0</span>:
+                {/* Bob cursor */}
+                <span
+                  className="absolute cursor-blink"
+                  style={{ left: 120, top: 0, bottom: 0, width: 2, background: MAGENTA, boxShadow: `0 0 8px ${MAGENTA}` }}
+                >
+                  <span
+                    className="absolute -top-5 -left-1 px-1.5 py-0.5 text-[9px] font-mono font-bold whitespace-nowrap"
+                    style={{ background: MAGENTA, color: "#000", boxShadow: `0 0 10px ${MAGENTA}` }}
+                  >
+                    BOB
+                  </span>
+                </span>
               </div>
-              <div className="leading-6 text-green-400">
-                {"    "}"""Calculate the nth Fibonacci number."""
+              {/* Line 4 - Bob selection */}
+              <div style={{ background: `${MAGENTA}18` }}>
+                {"        "}<span style={{ color: MAGENTA }}>return</span> <span style={{ color: YELLOW }}>0</span>
               </div>
-              <div className="leading-6 relative">
-                {"    "}<span className="text-purple-400">if</span> n &lt;= <span className="text-orange-400">0</span>:
-                
-                {/* Bob Cursor */}
-                <div className="absolute left-[120px] top-0 bottom-0 w-0.5 bg-orange z-20 animate-pulse">
-                  <div className="absolute -top-4 -left-1 bg-orange text-[#181825] text-[10px] font-bold px-1 rounded whitespace-nowrap">Bob ▎</div>
+              {/* Line 5 */}
+              <div>{"    "}<span style={{ color: MAGENTA }}>elif</span> n == <span style={{ color: YELLOW }}>1</span>:</div>
+              {/* Line 6 */}
+              <div>{"        "}<span style={{ color: MAGENTA }}>return</span> <span style={{ color: YELLOW }}>1</span></div>
+              {/* Line 7 */}
+              <div>{"    "}<span style={{ color: MAGENTA }}>else</span>:</div>
+              {/* Line 8 - AI suggestion + Alice cursor */}
+              <div className="relative" style={{ background: `${CYAN}10` }}>
+                {/* AI lightbulb */}
+                <div className="absolute -left-5 top-1">
+                  <button
+                    onClick={() => setShowAISuggestion(!showAISuggestion)}
+                    data-testid="btn-ai-lightbulb"
+                    style={{ color: YELLOW, filter: `drop-shadow(0 0 6px ${YELLOW})` }}
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+                {"        "}<span style={{ color: MAGENTA }}>return</span> fibonacci(n-<span style={{ color: YELLOW }}>1</span>) + fibonacci(n-<span style={{ color: YELLOW }}>2</span>)
+
+                {/* Alice cursor */}
+                <span
+                  className="absolute cursor-blink"
+                  style={{ left: 390, top: 0, bottom: 0, width: 2, background: CYAN, boxShadow: `0 0 8px ${CYAN}` }}
+                >
+                  <span
+                    className="absolute -top-5 -left-1 px-1.5 py-0.5 text-[9px] font-mono font-bold whitespace-nowrap"
+                    style={{ background: CYAN, color: "#000", boxShadow: `0 0 10px ${CYAN}` }}
+                  >
+                    ALICE
+                  </span>
+                </span>
+
+                {/* AI suggestion popup */}
+                <AnimatePresence>
+                  {showAISuggestion && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      className="absolute z-30 left-8 -top-24 w-72 p-3 border text-[11px]"
+                      style={{ background: PANEL, borderColor: `${YELLOW}55`, boxShadow: `0 0 20px ${YELLOW}22` }}
+                    >
+                      <div className="font-mono mb-1" style={{ color: YELLOW }}>// NEURAL_AI :: OPTIMIZATION</div>
+                      <p className="font-mono text-muted-foreground mb-2">Use memoization via <code style={{ color: CYAN }}>@lru_cache</code> to avoid redundant recursive calls.</p>
+                      <div className="flex gap-2">
+                        <button
+                          className="px-2 py-0.5 text-[10px] font-mono border"
+                          style={{ borderColor: `${CYAN}55`, color: CYAN, background: `${CYAN}0d` }}
+                          onClick={() => setShowAISuggestion(false)}
+                        >
+                          APPLY
+                        </button>
+                        <button
+                          className="px-2 py-0.5 text-[10px] font-mono border"
+                          style={{ borderColor: `${RED}44`, color: `${RED}aa`, background: "transparent" }}
+                          onClick={() => setShowAISuggestion(false)}
+                        >
+                          DISMISS
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              <div className="leading-6 bg-orange/20 relative">
-                {"        "}<span className="text-purple-400">return</span> <span className="text-orange-400">0</span>
+              {/* Line 9 */}
+              <div className="mt-4"></div>
+              {/* Line 10 */}
+              <div style={{ color: "hsl(220 25% 40%)" }}># ── runtime test ──</div>
+              {/* Line 11 */}
+              <div><span style={{ color: MAGENTA }}>if</span> __name__ == <span style={{ color: GREEN }}>"__main__"</span>:</div>
+              {/* Line 12 */}
+              <div style={{ background: `${RED}10` }}>
+                {"    "}<span style={{ color: MAGENTA }}>for</span> i <span style={{ color: MAGENTA }}>in</span> <span style={{ color: CYAN }}>range</span>(<span style={{ color: YELLOW }}>10</span>):
+                {/* Warning indicator */}
+                <span className="ml-2 text-[10px] font-mono px-1" style={{ color: RED, background: `${RED}15`, borderLeft: `2px solid ${RED}` }}>!</span>
               </div>
-              <div className="leading-6">
-                {"    "}<span className="text-purple-400">elif</span> n == <span className="text-orange-400">1</span>:
-              </div>
-              <div className="leading-6">
-                {"        "}<span className="text-purple-400">return</span> <span className="text-orange-400">1</span>
-              </div>
-              <div className="leading-6">
-                {"    "}<span className="text-purple-400">else</span>:
-              </div>
-              <div className="leading-6 relative bg-blue-500/10">
-                {"        "}<span className="text-purple-400">return</span> fibonacci(n-<span className="text-orange-400">1</span>) + fibonacci(n-<span className="text-orange-400">2</span>)
-                
-                {/* AI Suggestion Indicator */}
-                <div className="absolute -left-6 top-1 cursor-pointer hover:scale-110 transition-transform">
-                  <Lightbulb className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                </div>
-                
-                {/* Alice Cursor */}
-                <div className="absolute left-[380px] top-0 bottom-0 w-0.5 bg-blue z-20 animate-pulse">
-                  <div className="absolute -top-4 -left-1 bg-blue text-[#181825] text-[10px] font-bold px-1 rounded whitespace-nowrap">Alice ▎</div>
-                </div>
-              </div>
-              <div className="leading-6 mt-4">
-                <span className="text-gray-500"># Test the function</span>
-              </div>
-              <div className="leading-6">
-                <span className="text-purple-400">if</span> __name__ == <span className="text-green-400">"__main__"</span>:
-              </div>
-              <div className="leading-6">
-                {"    "}<span className="text-purple-400">for</span> i <span className="text-purple-400">in</span> <span className="text-blue-400">range</span>(<span className="text-orange-400">10</span>):
-              </div>
-              <div className="leading-6">
-                {"        "}<span className="text-blue-400">print</span>(<span className="text-green-400">f"Fibonacci({"{i}"}) = "</span>, fibonacci(i))
-              </div>
+              {/* Line 13 */}
+              <div>{"        "}<span style={{ color: CYAN }}>print</span>(<span style={{ color: GREEN }}>{`f"fibonacci({"{i}"}) = "`}</span>, fibonacci(i))</div>
+              {[...Array(14)].map((_, i) => <div key={i} className="leading-6" />)}
             </div>
           </div>
-          
-          {/* Editor Status Bar */}
-          <div className="h-6 bg-[#181825] border-t border-border/50 flex items-center justify-between px-4 text-xs text-muted-foreground shrink-0">
-            <div className="flex gap-4">
-              <span>0 errors, 1 warning</span>
+
+          {/* Status bar */}
+          <div
+            className="h-6 flex items-center justify-between px-4 text-[10px] font-mono shrink-0 border-t"
+            style={{ background: `${CYAN}0a`, borderColor: `${CYAN}22`, color: "hsl(220 30% 45%)" }}
+          >
+            <div className="flex gap-3">
+              <span style={{ color: YELLOW }}>1 warning</span>
+              <span style={{ color: RED }}>0 errors</span>
             </div>
             <div className="flex gap-4">
-              <span>Ln 14, Col 23</span>
+              <span>Ln 8, Col 42</span>
               <span>Spaces: 4</span>
               <span>UTF-8</span>
-              <span>Python</span>
+              <span style={{ color: CYAN }}>PYTHON</span>
             </div>
           </div>
         </div>
 
-        {/* RIGHT PANEL - AI */}
+        {/* RIGHT: AI Panel */}
         <AnimatePresence initial={false}>
           {rightOpen && (
-            <motion.div 
+            <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
+              animate={{ width: 290, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="panel-bg border-l border-border shrink-0 flex flex-col"
+              transition={{ duration: 0.2 }}
+              className="shrink-0 flex flex-col border-l overflow-hidden"
+              style={panelStyle}
             >
-              <div className="p-3 border-b border-border flex items-center justify-between">
+              {/* Header */}
+              <div className="px-3 py-2 border-b flex items-center justify-between shrink-0" style={{ borderColor: `${CYAN}22` }}>
                 <div className="flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-green-400" />
-                  <span className="font-semibold text-sm">AI Co-Pilot</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <Bot className="w-4 h-4" style={{ color: CYAN, filter: `drop-shadow(0 0 6px ${CYAN})` }} />
+                  <span className="text-xs font-mono tracking-widest" style={{ color: CYAN }}>NEURAL AI</span>
+                  <NeonDot color={CYAN} size={6} />
                 </div>
-                <button className="p-1 hover:bg-background/50 rounded" onClick={() => setRightOpen(false)} data-testid="btn-collapse-right"><ChevronRight className="w-4 h-4" /></button>
-              </div>
-              
-              <div className="px-3 py-1.5 bg-background/50 border-b border-border text-xs text-muted-foreground flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full border-2 border-green-500 border-t-transparent animate-spin"></div>
-                Analyzing changes...
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                
-                <div className="bg-background/50 border border-border border-l-4 border-l-yellow-500 rounded-md p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-foreground">AI Suggestion</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">2m ago</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Line 12 has a potential division by zero. Consider adding a check.</p>
-                </div>
-
-                <div className="bg-background/50 border border-border border-l-4 border-l-blue rounded-md p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-foreground">Optimization</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">1m ago</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 mb-2">Your fibonacci function could be optimized using memoization for large inputs.</p>
-                  <div className="bg-[#181825] rounded p-2 text-[10px] font-mono text-muted-foreground overflow-x-auto border border-border/50">
-                    <div className="text-purple-400">from</div> functools <div className="text-purple-400">import</div> lru_cache<br/>
-                    @lru_cache(maxsize=<div className="text-purple-400">None</div>)<br/>
-                    <div className="text-purple-400">def</div> <div className="text-blue-400">fibonacci</div>(n)...
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Button size="sm" variant="secondary" className="h-6 text-[10px] px-2">Apply</Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2">Copy</Button>
-                  </div>
-                </div>
-
-                <div className="bg-background/50 border border-border border-l-4 border-l-gray-500 rounded-md p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-foreground">Info</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">Just now</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">This file has 3 functions. All have docstrings.</p>
-                </div>
-
+                <button
+                  className="p-1 transition-colors"
+                  style={{ color: `${CYAN}55` }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}55`}
+                  onClick={() => setRightOpen(false)}
+                  data-testid="btn-collapse-right"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              <div className="p-3 border-t border-border bg-background/30">
+              {/* AI status */}
+              <div className="px-3 py-1.5 text-[10px] font-mono flex items-center gap-2 border-b shrink-0" style={{ borderColor: `${CYAN}15`, color: `${CYAN}88`, background: `${CYAN}06` }}>
+                <div className="w-2.5 h-2.5 rounded-full border-2 animate-spin" style={{ borderColor: `${CYAN}44`, borderTopColor: CYAN }} />
+                ANALYZING STREAM...
+              </div>
+
+              {/* Suggestions feed */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {[
+                  {
+                    type: "WARNING",
+                    icon: <AlertTriangle className="w-3 h-3" />,
+                    color: YELLOW,
+                    label: "ANOMALY DETECTED",
+                    time: "3m ago",
+                    body: "Line 12: Potential division by zero in loop iteration. Integrity check recommended.",
+                    code: null,
+                  },
+                  {
+                    type: "OPT",
+                    icon: <Zap className="w-3 h-3" />,
+                    color: CYAN,
+                    label: "OPTIMIZATION VECTOR",
+                    time: "1m ago",
+                    body: "fibonacci() executes O(2^n) calls. Inject memoization to achieve O(n).",
+                    code: "from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fibonacci(n: int) -> int:\n    ...",
+                  },
+                  {
+                    type: "INFO",
+                    icon: <Info className="w-3 h-3" />,
+                    color: "hsl(220 30% 55%)",
+                    label: "SCAN COMPLETE",
+                    time: "now",
+                    body: "3 functions indexed. All have docstrings. Coverage: 87%.",
+                    code: null,
+                  },
+                  {
+                    type: "CRITICAL",
+                    icon: <ShieldAlert className="w-3 h-3" />,
+                    color: RED,
+                    label: "TYPE VIOLATION",
+                    time: "5m ago",
+                    body: "Missing return type annotation on recursive branch (line 8). Type safety compromised.",
+                    code: null,
+                  },
+                ].map((msg, i) => (
+                  <div
+                    key={i}
+                    className="border border-l-2 p-2.5"
+                    style={{
+                      background: `${msg.color}08`,
+                      borderColor: `${msg.color}25`,
+                      borderLeftColor: msg.color,
+                    }}
+                    data-testid={`ai-msg-${i}`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span style={{ color: msg.color }}>{msg.icon}</span>
+                        <span className="text-[9px] font-mono tracking-widest" style={{ color: msg.color }}>{msg.label}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground">{msg.time}</span>
+                    </div>
+                    <p className="text-[11px] font-mono text-muted-foreground leading-relaxed">{msg.body}</p>
+                    {msg.code && (
+                      <div className="mt-2">
+                        <div
+                          className="p-2 text-[10px] font-mono rounded-none border overflow-x-auto"
+                          style={{ background: "#010105", borderColor: `${CYAN}22`, color: CYAN, whiteSpace: "pre" }}
+                        >
+                          {msg.code}
+                        </div>
+                        <div className="flex gap-2 mt-1.5">
+                          <button className="px-2 py-0.5 text-[10px] font-mono border transition-colors" style={{ borderColor: `${CYAN}44`, color: CYAN, background: `${CYAN}0d` }}>APPLY</button>
+                          <button className="px-2 py-0.5 text-[10px] font-mono border" style={{ borderColor: `${CYAN}22`, color: "hsl(220 30% 50%)" }}>COPY</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Ask AI input */}
+              <div className="p-3 border-t shrink-0" style={{ borderColor: `${CYAN}22`, background: `${CYAN}04` }}>
                 <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Ask anything about the code..." 
-                    className="w-full bg-[#181825] border border-border rounded-md pl-3 pr-8 py-2 text-sm focus:outline-none focus:border-primary"
+                  <input
+                    type="text"
+                    placeholder="Query the neural AI..."
+                    className="w-full border pl-3 pr-8 py-2 text-xs font-mono outline-none placeholder:text-muted-foreground/40 transition-colors"
+                    style={{ background: "#010105", borderColor: `${CYAN}33`, color: "hsl(195 80% 92%)" }}
+                    onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = `${CYAN}77`}
+                    onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = `${CYAN}33`}
+                    data-testid="input-ask-ai"
                   />
-                  <button className="absolute right-2 top-2 text-muted-foreground hover:text-primary">
-                    <Send className="w-4 h-4" />
+                  <button
+                    className="absolute right-2 top-2 transition-colors"
+                    style={{ color: `${CYAN}66` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+                    data-testid="btn-ai-send"
+                  >
+                    <Send className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-1 text-center">Press Ctrl+Enter to send</div>
+                <p className="text-[9px] font-mono text-muted-foreground/40 mt-1 text-center tracking-wider">CTRL+ENTER TO TRANSMIT</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {!rightOpen && (
-          <div className="w-10 panel-bg border-l border-border shrink-0 flex flex-col items-center py-2">
-            <button className="p-2 hover:bg-background/50 rounded text-muted-foreground hover:text-foreground" onClick={() => setRightOpen(true)} data-testid="btn-expand-right">
-              <ChevronLeft className="w-4 h-4" />
+          <div className="w-9 shrink-0 flex flex-col items-center py-2 border-l" style={panelStyle}>
+            <button
+              className="p-1.5 transition-colors"
+              style={{ color: `${CYAN}66` }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+              onClick={() => setRightOpen(true)}
+              data-testid="btn-expand-right"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <div className="mt-4 relative">
-              <Bot className="w-5 h-5 text-muted-foreground" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+            <div className="mt-3 relative">
+              <Bot className="w-4 h-4" style={{ color: `${CYAN}66` }} />
+              <NeonDot color={CYAN} size={5} />
             </div>
           </div>
         )}
       </div>
 
-      {/* BOTTOM BAR */}
-      <div className="h-10 bar-bg border-t border-border flex items-center justify-between px-4 shrink-0 relative z-20">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={`h-7 gap-2 ${chatOpen ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+      {/* ── BOTTOM BAR ── */}
+      <div
+        className="h-10 flex items-center justify-between px-4 shrink-0 border-t relative z-20"
+        style={barStyle}
+      >
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(300_100%_60%_/_0.3)] to-transparent" />
+
+        <button
+          className="flex items-center gap-2 text-xs font-mono tracking-wider px-3 h-6 border transition-all"
+          style={chatOpen
+            ? { background: `${CYAN}15`, borderColor: `${CYAN}55`, color: CYAN }
+            : { background: "transparent", borderColor: `${CYAN}22`, color: "hsl(220 30% 50%)" }
+          }
           onClick={() => setChatOpen(!chatOpen)}
           data-testid="btn-toggle-chat"
         >
-          <MessageSquare className="w-4 h-4" />
-          Chat
-        </Button>
+          <MessageSquare className="w-3.5 h-3.5" />
+          COMMS
+        </button>
 
-        <div className="flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
-          <div className="flex items-center gap-2 bg-background/50 px-3 py-1 rounded-full border border-border">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-xs font-medium text-green-400">Alice 🎙</span>
+        {/* Voice controls center */}
+        <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+          <div
+            className="flex items-center gap-2 px-3 py-1 border"
+            style={{ background: `${GREEN}0d`, borderColor: `${GREEN}44`, boxShadow: `0 0 12px ${GREEN}22` }}
+          >
+            <NeonDot color={GREEN} size={5} />
+            <span className="text-[10px] font-mono" style={{ color: GREEN }}>alice_zero</span>
           </div>
-          <Button variant="outline" size="icon" className="h-7 w-7 rounded-full bg-background/50" onClick={() => setIsMuted(!isMuted)}>
-            {isMuted ? <MicOff className="w-3.5 h-3.5 text-red-400" /> : <Mic className="w-3.5 h-3.5" />}
-          </Button>
-          <Button variant="outline" size="icon" className="h-7 w-7 rounded-full bg-background/50">
-            <Volume2 className="w-3.5 h-3.5" />
-          </Button>
-          <Button variant="destructive" size="icon" className="h-7 w-7 rounded-full">
-            <PhoneOff className="w-3.5 h-3.5" />
-          </Button>
+          <button
+            className="w-7 h-7 flex items-center justify-center border transition-all"
+            style={isMuted
+              ? { borderColor: `${RED}55`, color: RED, background: `${RED}15` }
+              : { borderColor: `${CYAN}33`, color: `${CYAN}88`, background: "transparent" }
+            }
+            onClick={() => setIsMuted(!isMuted)}
+            data-testid="btn-mute"
+          >
+            {isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+          </button>
+          <button
+            className="w-7 h-7 flex items-center justify-center border"
+            style={{ borderColor: `${CYAN}33`, color: `${CYAN}88`, background: "transparent" }}
+            data-testid="btn-speaker"
+          >
+            <Volume2 className="w-3 h-3" />
+          </button>
+          <button
+            className="w-7 h-7 flex items-center justify-center border"
+            style={{ borderColor: `${RED}55`, color: RED, background: `${RED}0d` }}
+            data-testid="btn-leave-call"
+          >
+            <PhoneOff className="w-3 h-3" />
+          </button>
         </div>
 
-        <div className="text-xs font-mono text-muted-foreground">
-          01:23:45
+        <div className="font-mono text-xs" style={{ color: `${CYAN}66` }}>
+          <span style={{ color: `${CYAN}44` }}>UPTIME </span>
+          <span style={{ color: CYAN, textShadow: `0 0 8px ${CYAN}66` }}>01:23:45</span>
         </div>
       </div>
 
-      {/* CHAT DRAWER */}
+      {/* ── CHAT DRAWER ── */}
       <AnimatePresence>
         {chatOpen && (
-          <motion.div 
+          <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute bottom-10 left-0 right-0 h-64 panel-bg border-t border-border z-10 flex flex-col shadow-2xl"
+            transition={{ type: "spring", damping: 28, stiffness: 220 }}
+            className="absolute bottom-10 left-0 right-0 h-64 flex flex-col z-10 border-t"
+            style={{ background: `${PANEL}f5`, borderColor: `${CYAN}33`, boxShadow: `0 -10px 40px ${CYAN}15` }}
           >
-            <div className="flex justify-between items-center p-2 border-b border-border bg-background/50">
-              <span className="text-sm font-semibold ml-2 text-foreground">Room Chat</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setChatOpen(false)}>
+            <div className="flex items-center justify-between px-4 py-2 border-b shrink-0" style={{ borderColor: `${CYAN}22`, background: BAR }}>
+              <div className="flex items-center gap-2">
+                <NeonTag color={CYAN}>COMMS CHANNEL</NeonTag>
+              </div>
+              <button
+                style={{ color: `${CYAN}66` }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = CYAN}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${CYAN}66`}
+                onClick={() => setChatOpen(false)}
+                data-testid="btn-close-chat"
+              >
                 <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="flex flex-col items-start">
-                <span className="text-[10px] text-muted-foreground ml-1 mb-0.5">Alice</span>
-                <div className="bg-blue/20 text-blue-100 px-3 py-1.5 rounded-lg rounded-tl-none text-sm max-w-[80%] border border-blue/30">
-                  Let's refactor the fibonacci function
-                </div>
-              </div>
-              
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground mr-1 mb-0.5">You</span>
-                <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg rounded-tr-none text-sm max-w-[80%]">
-                  Good idea, I'll start
-                </div>
-              </div>
-
-              <div className="flex flex-col items-start">
-                <span className="text-[10px] text-muted-foreground ml-1 mb-0.5">Bob</span>
-                <div className="bg-orange/20 text-orange-100 px-3 py-1.5 rounded-lg rounded-tl-none text-sm max-w-[80%] border border-orange/30">
-                  <span className="text-blue-300 font-semibold">@ai</span> explain this function
-                </div>
-              </div>
-
-              <div className="flex flex-col items-start">
-                <span className="text-[10px] text-green-400 font-semibold ml-1 mb-0.5 flex items-center gap-1"><Bot className="w-3 h-3"/> AI Co-Pilot</span>
-                <div className="bg-background border border-border px-3 py-2 rounded-lg rounded-tl-none text-sm max-w-[80%] text-muted-foreground">
-                  The <code className="text-primary bg-primary/10 px-1 rounded">fibonacci</code> function calculates the nth number in the Fibonacci sequence recursively. However, since it calls itself twice for each non-base case without caching results, it has an exponential time complexity $O(2^n)$.
-                </div>
-              </div>
+              </button>
             </div>
 
-            <div className="p-2 border-t border-border bg-background flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Type a message..." 
-                className="flex-1 bg-[#181825] border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-primary text-foreground"
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {[
+                { from: "alice_zero", text: "Let's refactor the fibonacci function — it's O(2^n) right now", mine: false, color: CYAN },
+                { from: "YOU", text: "Agreed. I'll start with the memoization wrapper", mine: true, color: MAGENTA },
+                { from: "bob_runner", text: "@ai explain why this causes stack overflow on large inputs", mine: false, color: MAGENTA },
+                { from: "NEURAL AI", text: "fibonacci(n) calls itself twice per invocation. Without caching, this creates 2^n recursive calls. For n=40, that's ~1 trillion operations. Recommend @lru_cache.", mine: false, color: GREEN, isAI: true },
+              ].map((msg, i) => (
+                <div key={i} className={`flex flex-col ${msg.mine ? "items-end" : "items-start"}`}>
+                  <span className="text-[9px] font-mono mb-0.5" style={{ color: msg.color + "88" }}>{msg.from}</span>
+                  <div
+                    className="max-w-xs px-3 py-1.5 text-xs font-mono border"
+                    style={msg.mine
+                      ? { background: `${msg.color}15`, borderColor: `${msg.color}44`, color: "hsl(195 80% 92%)" }
+                      : msg.isAI
+                        ? { background: `${GREEN}08`, borderColor: `${GREEN}33`, color: `${GREEN}dd`, borderLeft: `2px solid ${GREEN}` }
+                        : { background: `${PANEL}`, borderColor: `${CYAN}22`, color: "hsl(195 80% 85%)" }
+                    }
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 p-2 border-t shrink-0" style={{ borderColor: `${CYAN}22` }}>
+              <input
+                className="flex-1 bg-transparent border px-3 py-1.5 text-xs font-mono outline-none"
+                style={{ borderColor: `${CYAN}33`, color: "hsl(195 80% 92%)" }}
+                placeholder="Transmit message..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                data-testid="input-chat"
               />
-              <Button size="icon" className="h-8 w-8 shrink-0"><Send className="w-4 h-4"/></Button>
+              <button
+                className="px-3 py-1.5 border text-xs font-mono"
+                style={{ borderColor: `${CYAN}44`, color: CYAN, background: `${CYAN}0d` }}
+                data-testid="btn-send-chat"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* END SESSION MODAL */}
-      <Dialog open={isEndSessionOpen} onOpenChange={setIsEndSessionOpen}>
-        <DialogContent className="sm:max-w-md panel-bg border-border text-foreground">
-          <DialogHeader>
-            <DialogTitle>Session Summary</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="flex items-center justify-between text-sm p-3 bg-background/50 rounded border border-border">
-              <span className="text-muted-foreground">Duration</span>
-              <span className="font-mono font-bold text-primary">01:23:45</span>
+      {/* ── TERMINATE SESSION MODAL ── */}
+      <Dialog open={endOpen} onOpenChange={setEndOpen}>
+        <DialogContent className="sm:max-w-md border font-mono rounded-none p-0 overflow-hidden" style={{ background: "hsl(240 30% 4%)", borderColor: `${RED}44`, boxShadow: `0 0 50px ${RED}22` }}>
+          <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+          <div className="p-6">
+            <DialogHeader className="mb-5">
+              <div className="flex items-center gap-2 mb-1">
+                <NeonDot color={RED} size={6} />
+                <span className="text-[9px] tracking-widest" style={{ color: `${RED}77` }}>sys.terminate</span>
+              </div>
+              <DialogTitle className="text-sm tracking-widest uppercase" style={{ color: RED }}>
+                SESSION SUMMARY
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mb-6">
+              <div className="border p-3" style={{ borderColor: `${CYAN}22`, background: `${CYAN}06` }}>
+                <div className="text-[9px] tracking-widest mb-2" style={{ color: `${CYAN}66` }}>// NEURAL AI DEBRIEF</div>
+                <ul className="space-y-1 text-xs" style={{ color: "hsl(195 80% 80%)" }}>
+                  {["Refactored fibonacci() to O(n) using memoization", "Fixed division-by-zero in loop body", "Added type annotations to all functions", "Test coverage raised to 87%"].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span style={{ color: CYAN }}>▸</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex justify-between text-[10px]" style={{ color: "hsl(220 30% 50%)" }}>
+                <span>UPTIME: <span style={{ color: CYAN }}>01:23:45</span></span>
+                <span>COMMITS: <span style={{ color: CYAN }}>7</span></span>
+                <span>FILES: <span style={{ color: CYAN }}>3</span></span>
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <Bot className="w-4 h-4 text-green-400" /> AI Build Summary
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
-                <li>Implemented recursive Fibonacci function</li>
-                <li>Added input validation and type hints</li>
-                <li>Created test suite in <code className="text-primary">test_main.py</code></li>
-                <li>Optimized performance using memoization</li>
-              </ul>
-            </div>
+            <DialogFooter className="flex gap-2">
+              <button
+                className="flex-1 py-2 text-xs tracking-widest border"
+                style={{ borderColor: `${CYAN}44`, color: CYAN, background: `${CYAN}0d` }}
+              >
+                EXPORT LOG
+              </button>
+              <button
+                className="flex-1 py-2 text-xs tracking-widest border"
+                style={{ borderColor: `${RED}55`, color: RED, background: `${RED}0d` }}
+                onClick={() => { setEndOpen(false); setLocation("/"); }}
+                data-testid="btn-confirm-end"
+              >
+                JACK OUT
+              </button>
+            </DialogFooter>
+          </div>
+          <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+        </DialogContent>
+      </Dialog>
 
+      {/* ── SETTINGS SHEET ── */}
+      <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <SheetContent
+          className="border-l font-mono rounded-none"
+          style={{ background: "hsl(240 25% 6%)", borderColor: `${MAGENTA}33`, boxShadow: `-10px 0 40px ${MAGENTA}15` }}
+        >
+          <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[hsl(300_100%_60%_/_0.5)] to-transparent" />
+          <SheetHeader className="mb-6">
+            <div className="text-[9px] tracking-widest mb-1" style={{ color: `${MAGENTA}66` }}>sys.config</div>
+            <SheetTitle className="text-sm tracking-widest uppercase" style={{ color: MAGENTA }}>SYSTEM SETTINGS</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-6">
+            {[
+              { label: "FONT SIZE", type: "range" },
+            ].map(field => (
+              <div key={field.label} className="space-y-2">
+                <label className="text-[9px] tracking-widest" style={{ color: `${MAGENTA}77` }}>{field.label}</label>
+                <input type="range" className="w-full" style={{ accentColor: MAGENTA }} />
+              </div>
+            ))}
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Modified Files</h4>
-              <div className="flex gap-2 flex-wrap">
-                <span className="text-xs px-2 py-1 bg-background border border-border rounded text-muted-foreground">main.py</span>
-                <span className="text-xs px-2 py-1 bg-background border border-border rounded text-muted-foreground">test_main.py</span>
+              <label className="text-[9px] tracking-widest" style={{ color: `${MAGENTA}77` }}>AI RESPONSE DELAY</label>
+              <Select defaultValue="instant">
+                <SelectTrigger className="border rounded-none" style={{ borderColor: `${MAGENTA}33`, background: `${MAGENTA}08`, color: MAGENTA }}><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-none" style={{ background: PANEL, borderColor: `${MAGENTA}33` }}>
+                  <SelectItem value="instant">INSTANT</SelectItem>
+                  <SelectItem value="2s">2 SECONDS</SelectItem>
+                  <SelectItem value="5s">5 SECONDS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[9px] tracking-widest" style={{ color: `${MAGENTA}77` }}>KEY BINDINGS</label>
+              <Select defaultValue="vscode">
+                <SelectTrigger className="border rounded-none" style={{ borderColor: `${MAGENTA}33`, background: `${MAGENTA}08`, color: MAGENTA }}><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-none" style={{ background: PANEL, borderColor: `${MAGENTA}33` }}>
+                  <SelectItem value="vscode">VS CODE</SelectItem>
+                  <SelectItem value="vim">VIM</SelectItem>
+                  <SelectItem value="emacs">EMACS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] tracking-widest" style={{ color: `${MAGENTA}77` }}>NEURAL AI ACTIVE</span>
+              <div
+                className="w-10 h-5 border relative cursor-pointer"
+                style={{ borderColor: `${MAGENTA}44`, background: `${MAGENTA}0d` }}
+                data-testid="toggle-ai"
+              >
+                <div className="absolute top-0.5 left-0.5 w-4 h-4" style={{ background: MAGENTA, boxShadow: `0 0 8px ${MAGENTA}` }} />
               </div>
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsEndSessionOpen(false)}>Cancel</Button>
-            <Button variant="secondary" className="w-full sm:w-auto">Download Summary</Button>
-            <Button variant="destructive" className="w-full sm:w-auto" onClick={leaveRoom} data-testid="btn-confirm-end-session">Save & End</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
