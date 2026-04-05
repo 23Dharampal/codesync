@@ -1,49 +1,55 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# ── Dependencies ────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
+# ── Frontend build ───────────────────────────────────────
+frontend/dist/
+frontend/.vite/
 
-# dependencies
-node_modules
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# ── Virtual environments ─────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# ── Database ─────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+# ── Environment / secrets ────────────────────────────────
+.env
+.env.local
+.env.*.local
 
-# System Files
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# ── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
 
-# Replit
+# ── Misc ─────────────────────────────────────────────────
+*.pem
 .cache/
-.local/
+tmp/
