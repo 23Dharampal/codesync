@@ -4,6 +4,14 @@ A real-time collaborative code editor with live cursors, voice calls, chat, and 
 
 ---
 
+## Documentation
+
+| Document | Description |
+|---|---|
+| [docs/features.md](docs/features.md) | Detailed feature reference — all features, supported languages, WebSocket events, limitations |
+
+---
+
 ## Features
 
 - **Live code editing** — Monaco Editor (VS Code engine) shared across all users in real time
