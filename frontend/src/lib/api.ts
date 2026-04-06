@@ -125,3 +125,22 @@ export interface RunResult {
 
 export const runCode = (code: string, language: string, filename = "main") =>
   req<RunResult>("POST", "/api/run", { code, language, filename });
+
+// ── Whiteboard ──────────────────────────────────────────
+export interface WhiteboardData {
+  elements: unknown[];
+  app_state: Record<string, unknown>;
+}
+
+export const getWhiteboard = (code: string) =>
+  req<WhiteboardData>("GET", `/api/rooms/${code}/whiteboard`);
+
+export const saveWhiteboard = (
+  code: string,
+  elements: unknown[],
+  appState: Record<string, unknown>,
+) =>
+  req<{ ok: boolean }>("PUT", `/api/rooms/${code}/whiteboard`, {
+    elements,
+    app_state: appState,
+  });

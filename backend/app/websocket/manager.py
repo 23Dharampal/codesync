@@ -148,3 +148,12 @@ async def handle_event(conn: UserConnection, event: dict, room_code: str):
             "name": event.get("name"),
             "user": conn.display_name,
         }, exclude=conn.websocket)
+
+    elif event_type == "whiteboard_update":
+        # Broadcast Excalidraw elements + appState to everyone else in the room
+        await manager.broadcast(room_code, {
+            "type": "whiteboard_update",
+            "elements": event.get("elements", []),
+            "app_state": event.get("app_state", {}),
+            "user": conn.display_name,
+        }, exclude=conn.websocket)

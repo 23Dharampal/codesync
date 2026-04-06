@@ -5,6 +5,10 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    // Excalidraw's CJS bundle references process.env.NODE_ENV at runtime
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "production"),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
