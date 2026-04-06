@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useParams } from "wouter";
 import {
   Mic, MicOff, PhoneOff, Settings, MessageSquare,
-  ChevronRight, ChevronLeft, Plus, X, Send, AlertTriangle,
+  ChevronRight, ChevronLeft, X, Send, AlertTriangle,
   Lightbulb, Zap, FileCode, FileText, FlaskConical, ChevronDown,
   LogOut, Phone, Play, Square, ChevronUp, ChevronDown as ChevronDownIcon,
+  PenLine,
 } from "lucide-react";
+import FileTree, { type CtxMenu } from "@/components/file-tree/FileTree";
 import { motion, AnimatePresence } from "framer-motion";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
@@ -16,6 +18,10 @@ import {
 } from "@/lib/api";
 import { useWebSocket, type WSUser, type WSEvent } from "@/hooks/use-websocket";
 import { useVoice } from "@/hooks/use-voice";
+import { useWhiteboard } from "@/hooks/use-whiteboard";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
+import type { AppState } from "@excalidraw/excalidraw/types/types";
+import WhiteboardPanel from "@/components/whiteboard/WhiteboardPanel";
 
 const B      = "hsl(213 90% 60%)";
 const BG     = "hsl(222 47% 5%)";
@@ -118,6 +124,13 @@ export default function Room() {
   // Voice
   const voice = useVoice(roomCode, displayName);
 
+  // Whiteboard (initialised after ws is declared below — we pass sendWhiteboardUpdate via callback)
+  const whiteboardLocalChangeRef = useRef<((elements: readonly ExcalidrawElement[], appState: Partial<AppState>) => void) | null>(null);
+  const whiteboard = useWhiteboard({
+    roomCode,
+    onLocalChange: (elements, appState) => whiteboardLocalChangeRef.current?.(elements, appState),
+  });
+
   // Monaco editor ref + remote cursors
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -129,6 +142,9 @@ export default function Room() {
   // pixel positions for overlay badges (React state so they re-render)
   const [cursorOverlays, setCursorOverlays] = useState<{ id: string; x: number; y: number; color: string; initials: string }[]>([]);
 
+  // View toggle — "editor" or "whiteboard"
+  const [activeView, setActiveView] = useState<"editor" | "whiteboard">("editor");
+
   // UI state
   const [aiOpen, setAiOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
@@ -138,6 +154,12 @@ export default function Room() {
   const [endOpen, setEndOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(true);
   const [appliedAI, setAppliedAI] = useState<number[]>([]);
+
+  // File tree context menu (typed from FileTree)
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
+  // Upload folder progress
+  const [uploading, setUploading] = useState(false);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
 
   // AI
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
@@ -157,6 +179,19 @@ export default function Room() {
   const [summary, setSummary] = useState<{ duration_seconds: number; files_modified: string[]; ai_summary: string } | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
+
+  // Sync Monaco content whenever the active file changes (Monaco is always mounted)
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const content = activeFile?.content ?? "";
+    if (editor.getValue() !== content) {
+      isRemoteChange.current = true;
+      editor.setValue(content);
+      isRemoteChange.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFileId]);
 
   // Load room + files on mount
   useEffect(() => {
@@ -244,6 +279,11 @@ export default function Room() {
           isRemoteChange.current = false;
         }
       }
+    } else if (event.type === "whiteboard_update") {
+      whiteboard.applyRemoteUpdate({
+        elements: event.elements as ExcalidrawElement[],
+        appState: event.app_state,
+      });
     }
   };
 
@@ -254,6 +294,14 @@ export default function Room() {
     onEvent: handleWSEvent,
     enabled: !loading,
   });
+
+  // Wire whiteboard local-change → WS send (done here so ws is in scope)
+  whiteboardLocalChangeRef.current = (elements, appState) => {
+    ws.sendWhiteboardUpdate(
+      elements as unknown[],
+      appState as Record<string, unknown>,
+    );
+  };
 
   // Analyze code when active file changes
   const analyzeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -289,6 +337,45 @@ export default function Room() {
       if (activeFileId === fileId) setActiveFileId(files.find(f => f.id !== fileId)?.id ?? null);
       ws.sendFileDeleted(fileId);
     } catch { /* ignore */ }
+  };
+
+  const handleRenameFile = async (fileId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    try {
+      const updated = await updateFile(roomCode, fileId, { name: trimmed });
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, name: updated.name } : f));
+      ws.sendFileRenamed(fileId, updated.name);
+    } catch { /* ignore */ }
+  };
+
+  const handleDuplicateFile = async (fileId: string) => {
+    const src = files.find(f => f.id === fileId);
+    if (!src) return;
+    const name = src.name.replace(/(\.[^.]+)?$/, (ext) => `_copy${ext}`);
+    try {
+      const file = await createFile(roomCode, name, src.content);
+      setFiles(prev => [...prev, file]);
+      setActiveFileId(file.id);
+      ws.sendFileCreated(file);
+    } catch { /* ignore */ }
+  };
+
+  const handleFolderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    setUploading(true);
+    try {
+      for (const f of Array.from(fileList)) {
+        const text = await f.text();
+        const created = await createFile(roomCode, f.name, text);
+        setFiles(prev => [...prev, created]);
+        ws.sendFileCreated(created);
+      }
+    } catch { /* ignore */ }
+    setUploading(false);
+    // reset input so same folder can be re-uploaded
+    if (folderInputRef.current) folderInputRef.current.value = "";
   };
 
   const codeChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -455,54 +542,44 @@ export default function Room() {
       </div>
 
       {/* BODY */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0" onClick={() => setCtxMenu(null)}>
 
-        {/* FILE TREE */}
+        {/* FILE TREE — powered by react-arborist */}
+        {/* Hidden folder upload input */}
+        <input
+          ref={folderInputRef}
+          type="file"
+          // @ts-expect-error webkitdirectory is non-standard but widely supported
+          webkitdirectory=""
+          multiple
+          className="hidden"
+          onChange={handleFolderUpload}
+        />
+
         <AnimatePresence initial={false}>
           {treeOpen && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 168, opacity: 1 }}
+              animate={{ width: 180, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="shrink-0 overflow-hidden"
-              style={{ background: SURF, borderRight: `1px solid ${BORDER}` }}
+              className="shrink-0 overflow-hidden flex flex-col"
+              style={{ borderRight: `1px solid ${BORDER}` }}
             >
-              <div className="flex items-center justify-between px-3 h-9"
-                style={{ borderBottom: `1px solid ${BORDER}` }}>
-                <span className="text-[10px] tracking-wider uppercase" style={{ color: DIM }}>Files</span>
-                <button onClick={handleAddFile} className="transition-colors hover:text-foreground" style={{ color: DIM }}>
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="py-1">
-                {files.length === 0 && (
-                  <p className="px-3 py-4 text-[10px] text-center" style={{ color: DIM }}>
-                    Create your first file →
-                  </p>
-                )}
-                {files.map(f => {
-                  const Icon = fileIcon(f.name);
-                  return (
-                    <div key={f.id} className="group flex items-center gap-2 px-3 py-1.5 text-xs"
-                      style={{
-                        color: f.id === activeFileId ? B : "hsl(213 35% 65%)",
-                        background: f.id === activeFileId ? `${B}12` : "transparent",
-                      }}>
-                      <button className="flex items-center gap-2 flex-1 text-left min-w-0"
-                        onClick={() => setActiveFileId(f.id)}>
-                        <Icon className="w-3.5 h-3.5 shrink-0" style={{ opacity: 0.6 }} />
-                        <span className="font-mono truncate">{f.name}</span>
-                      </button>
-                      <button onClick={() => handleDeleteFile(f.id)}
-                        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                        style={{ color: "hsl(0 72% 55%)" }}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+              <FileTree
+                files={files}
+                activeFileId={activeFileId}
+                uploading={uploading}
+                theme={{ B, SURF, EDGE, BORDER, DIM, TEXT }}
+                onSelect={(id) => setActiveFileId(id)}
+                onRename={handleRenameFile}
+                onDelete={handleDeleteFile}
+                onDuplicate={handleDuplicateFile}
+                onNewFile={handleAddFile}
+                onUploadFolder={() => folderInputRef.current?.click()}
+                ctxMenu={ctxMenu}
+                setCtxMenu={setCtxMenu}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -518,42 +595,106 @@ export default function Room() {
 
         {/* EDITOR COLUMN */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-          {/* File tabs + Run button */}
+          {/* File tabs + view toggle + Run button */}
           <div className="flex items-center h-9 shrink-0"
             style={{ background: SURF, borderBottom: `1px solid ${BORDER}` }}>
-            <div className="flex items-center flex-1 overflow-hidden">
-              {files.slice(0, 3).map(f => {
-                const Icon = fileIcon(f.name);
-                return (
-                  <button key={f.id} onClick={() => setActiveFileId(f.id)}
-                    className="flex items-center gap-1.5 px-4 h-full text-xs font-mono border-r transition-colors shrink-0"
-                    style={{
-                      borderColor: BORDER,
-                      color: f.id === activeFileId ? TEXT : DIM,
-                      borderBottom: f.id === activeFileId ? `1px solid ${B}` : "1px solid transparent",
-                      background: f.id === activeFileId ? EDGE : "transparent",
-                    }}>
-                    <Icon className="w-3 h-3" />
-                    {f.name}
-                  </button>
-                );
-              })}
+            {/* Show file tabs only in editor view */}
+            {activeView === "editor" && (
+              <div className="flex items-center flex-1 overflow-hidden">
+                {files.slice(0, 3).map(f => {
+                  const Icon = fileIcon(f.name);
+                  return (
+                    <button key={f.id} onClick={() => setActiveFileId(f.id)}
+                      className="flex items-center gap-1.5 px-4 h-full text-xs font-mono border-r transition-colors shrink-0"
+                      style={{
+                        borderColor: BORDER,
+                        color: f.id === activeFileId ? TEXT : DIM,
+                        borderBottom: f.id === activeFileId ? `1px solid ${B}` : "1px solid transparent",
+                        background: f.id === activeFileId ? EDGE : "transparent",
+                      }}>
+                      <Icon className="w-3 h-3" />
+                      {f.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {activeView === "whiteboard" && (
+              <div className="flex-1 flex items-center px-4 gap-1.5">
+                <PenLine className="w-3.5 h-3.5" style={{ color: B }} />
+                <span className="text-xs font-medium" style={{ color: B }}>Whiteboard</span>
+                <span className="text-[10px] px-1.5 py-0.5" style={{ color: DIM, border: `1px solid ${BORDER}` }}>
+                  shared with room
+                </span>
+              </div>
+            )}
+            {/* View toggle */}
+            <div className="flex items-center shrink-0" style={{ borderLeft: `1px solid ${BORDER}` }}>
+              <button
+                onClick={() => setActiveView("editor")}
+                className="flex items-center gap-1.5 px-3 h-full text-xs transition-colors"
+                style={{
+                  color: activeView === "editor" ? TEXT : DIM,
+                  borderBottom: activeView === "editor" ? `1px solid ${B}` : "1px solid transparent",
+                  background: activeView === "editor" ? EDGE : "transparent",
+                }}
+              >
+                <FileCode className="w-3 h-3" /> Code
+              </button>
+              <button
+                onClick={() => setActiveView("whiteboard")}
+                className="flex items-center gap-1.5 px-3 h-full text-xs transition-colors"
+                style={{
+                  color: activeView === "whiteboard" ? B : DIM,
+                  borderBottom: activeView === "whiteboard" ? `1px solid ${B}` : "1px solid transparent",
+                  background: activeView === "whiteboard" ? EDGE : "transparent",
+                }}
+              >
+                <PenLine className="w-3 h-3" /> Whiteboard
+              </button>
             </div>
-            {/* Run button */}
-            <button
-              onClick={handleRun}
-              disabled={running || !activeFile}
-              className="flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40 shrink-0"
-              style={{ background: "hsl(142 60% 45%)", color: "#fff" }}
-            >
-              {running
-                ? <><Square className="w-3 h-3" /> Running...</>
-                : <><Play className="w-3 h-3" /> Run</>}
-            </button>
+            {/* Run button — only in editor view */}
+            {activeView === "editor" && (
+              <button
+                onClick={handleRun}
+                disabled={running || !activeFile}
+                className="flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40 shrink-0"
+                style={{ background: "hsl(142 60% 45%)", color: "#fff" }}
+              >
+                {running
+                  ? <><Square className="w-3 h-3" /> Running...</>
+                  : <><Play className="w-3 h-3" /> Run</>}
+              </button>
+            )}
           </div>
 
-          {/* Code area — Monaco Editor */}
-          <div ref={editorContainerRef} className="flex-1 relative min-h-0" style={{ background: EDGE }}>
+          {/* Whiteboard — always mounted, hidden when code view active, to preserve in-memory state */}
+          {whiteboard.loading ? (
+            <div
+              className="flex-1 flex items-center justify-center"
+              style={{ background: EDGE, display: activeView === "whiteboard" ? "flex" : "none" }}
+            >
+              <span className="text-xs" style={{ color: DIM }}>Loading whiteboard...</span>
+            </div>
+          ) : (
+            <div
+              className="flex-1 min-h-0"
+              style={{ display: activeView === "whiteboard" ? "block" : "none" }}
+            >
+              <WhiteboardPanel
+                initialData={whiteboard.initialData}
+                onChange={whiteboard.handleLocalChange}
+                registerUpdateScene={whiteboard.registerUpdateScene}
+              />
+            </div>
+          )}
+
+          {/* Code area — Monaco Editor (hidden when whiteboard active, kept mounted to preserve state) */}
+          <div
+            ref={editorContainerRef}
+            className="flex-1 relative min-h-0"
+            style={{ background: EDGE, display: activeView === "editor" ? "flex" : "none", flexDirection: "column" }}
+          >
             {activeFile ? (
               <>
                 <Editor
@@ -639,9 +780,9 @@ export default function Room() {
             )}
           </div>
 
-          {/* Output Panel */}
+          {/* Output Panel — editor view only */}
           <AnimatePresence initial={false}>
-            {outputOpen && (
+            {outputOpen && activeView === "editor" && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 180, opacity: 1 }}

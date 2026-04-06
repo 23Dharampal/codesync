@@ -28,7 +28,8 @@ export type WSEvent =
   | { type: "language_change"; language: string; user: string }
   | { type: "file_created"; file: unknown; user: string }
   | { type: "file_deleted"; file_id: string; user: string }
-  | { type: "file_renamed"; file_id: string; name: string; user: string };
+  | { type: "file_renamed"; file_id: string; name: string; user: string }
+  | { type: "whiteboard_update"; elements: unknown[]; app_state: Record<string, unknown>; user: string };
 
 interface UseWebSocketOptions {
   roomCode: string;
@@ -112,6 +113,13 @@ export function useWebSocket({
     send({ type: "file_renamed", file_id: fileId, name });
   }, [send]);
 
+  const sendWhiteboardUpdate = useCallback(
+    (elements: unknown[], appState: Record<string, unknown>) => {
+      send({ type: "whiteboard_update", elements, app_state: appState });
+    },
+    [send],
+  );
+
   return {
     sendCursorMove,
     sendCodeChange,
@@ -120,5 +128,6 @@ export function useWebSocket({
     sendFileCreated,
     sendFileDeleted,
     sendFileRenamed,
+    sendWhiteboardUpdate,
   };
 }

@@ -4,13 +4,16 @@
 - [Room Management](#room-management)
 - [Real-time Code Editor](#real-time-code-editor)
 - [Live Cursors](#live-cursors)
-- [File Tree](#file-tree)
+- [File Explorer](#file-explorer)
+- [Whiteboard](#whiteboard)
 - [AI Co-Pilot](#ai-co-pilot)
 - [Code Runner](#code-runner)
 - [Voice Call](#voice-call)
 - [Chat](#chat)
 - [Session Summary](#session-summary)
 - [Settings Panel](#settings-panel)
+- [WebSocket Event Reference](#websocket-event-reference)
+- [Known Limitations & Future Work](#known-limitations--future-work)
 
 ---
 
@@ -44,6 +47,7 @@
 - All edits broadcast to every user in real time via WebSocket
 - Code auto-saved to database every 1 second (debounced)
 - Switching files loads the correct content instantly
+- File content syncs correctly after delete, rename, or remote change
 
 **Supported Languages (syntax highlighting + run)**
 
@@ -84,15 +88,53 @@
 
 ---
 
-## File Tree
+## File Explorer
+
+Powered by **react-arborist** — a VS Code-style interactive tree.
 
 - Left panel lists all files in the room
 - Click a file to open it in the editor
-- **+** button to create a new file (prompts for name)
-- Hover a file → red X button appears to delete it
-- File icons change based on extension (`.py`, `.js`, `.ts`, `.md`, `.json`, test files)
-- File changes (create, delete, rename) broadcast to all users via WebSocket
-- Panel is collapsible to give more editor space
+- **`+` button** in the header to create a new file
+- **Folder upload button** (↑ icon) — opens a native folder picker, uploads all text files from the selected directory at once
+- Files sync instantly to all users via WebSocket
+
+**Right-click context menu (on any file):**
+
+| Action | Shortcut |
+|---|---|
+| Rename | Right-click → Rename, or press **F2** |
+| Duplicate | Right-click → Duplicate |
+| Delete | Right-click → Delete, or press **Del** |
+
+**Inline rename:**
+- Click Rename from context menu or press F2
+- Edits in-place inside the file row
+- **Enter** confirms, **Escape** cancels
+- Rename is broadcast to all users via WebSocket
+
+**File icons** change based on extension (`.py`, `.js`, `.ts`, `.md`, `.json`, test files)
+
+**Panel is collapsible** to give more editor space
+
+---
+
+## Whiteboard
+
+A shared **Excalidraw** canvas — one per room, real-time collaborative.
+
+- Toggle between **Code** and **Whiteboard** views using the tab buttons in the editor header
+- Both views are kept mounted in the background — switching tabs never loses your work
+- All drawing changes are broadcast to every user in the room via WebSocket (debounced)
+- Whiteboard state is **persisted to the database** every 2 seconds and loaded when any user opens the room
+- Supports all Excalidraw drawing tools: shapes, arrows, text, freehand, images
+- **Clear canvas** and **export to PNG/SVG** via the Excalidraw toolbar
+- Background color is synced across users
+
+**Use cases:**
+- System architecture diagrams alongside code
+- Algorithm sketches before writing the implementation
+- Bug tracing / state flow diagrams
+- Visual onboarding — "here's what I understand so far"
 
 ---
 
@@ -111,7 +153,7 @@
 
 **Ask AI**
 - Text input at the bottom of the AI panel
-- Asks the AI anything about your current code
+- Ask the AI anything about your current code
 - Response streams back word-by-word via SSE (Server-Sent Events)
 - Press Enter or click Send
 - Context-aware — includes current file content and language
@@ -200,6 +242,7 @@ All real-time events flow through `ws://localhost:8000/ws/:roomCode`
 | `file_created` | Client → Server → Others | New file object |
 | `file_deleted` | Client → Server → Others | Deleted file ID |
 | `file_renamed` | Client → Server → Others | File ID and new name |
+| `whiteboard_update` | Client → Server → Others | Excalidraw elements + appState snapshot |
 
 ---
 
@@ -212,5 +255,6 @@ All real-time events flow through `ws://localhost:8000/ws/:roomCode`
 | Voice | Livekit Cloud required | Self-hosted Livekit option |
 | AI questions | Personal (only you see the answer) | Shared AI chat for the whole room |
 | AI autocomplete | Not implemented | Inline ghost-text suggestions (Copilot style) |
-| Whiteboard | Not implemented | Excalidraw integration |
+| Whiteboard sync | Last-write-wins via WebSocket | Yjs CRDT for conflict-free drawing |
+| Folder tree | Flat file list only | Nested folders with drag-and-drop |
 | Deploy | Local only | Docker Compose + Railway/Vercel |
