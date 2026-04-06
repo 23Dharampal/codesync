@@ -4,15 +4,15 @@ import {
   Mic, MicOff, PhoneOff, Settings, MessageSquare,
   ChevronRight, ChevronLeft, Plus, X, Send, AlertTriangle,
   Lightbulb, Zap, FileCode, FileText, FlaskConical, ChevronDown,
-  LogOut, Phone,
+  LogOut, Phone, Play, Square, ChevronUp, ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import {
   getRoom, listFiles, createFile, deleteFile, updateFile, endSession,
-  updateRoom, analyzeCode, askAIStream,
-  type Room, type RoomFile, type AIMessage,
+  updateRoom, analyzeCode, askAIStream, runCode,
+  type Room, type RoomFile, type AIMessage, type RunResult,
 } from "@/lib/api";
 import { useWebSocket, type WSUser, type WSEvent } from "@/hooks/use-websocket";
 import { useVoice } from "@/hooks/use-voice";
@@ -26,7 +26,15 @@ const BORDER = "hsl(220 30% 12%)";
 const DIM    = "hsl(213 25% 38%)";
 const TEXT   = "hsl(213 40% 85%)";
 
-const LANGS = ["Python", "TypeScript", "JavaScript", "Rust", "Go", "Java"];
+const LANGS = [
+  "Python", "JavaScript", "TypeScript",
+  "Java", "C", "C++",
+  "Go", "Rust", "Ruby",
+  "PHP", "Bash", "Swift",
+  "Kotlin", "Scala", "R",
+  "Perl", "Lua", "Haskell",
+  "Elixir", "Erlang",
+];
 
 function langToMonaco(lang: string): string {
   const map: Record<string, string> = {
@@ -36,6 +44,21 @@ function langToMonaco(lang: string): string {
     rust: "rust",
     go: "go",
     java: "java",
+    "c++": "cpp",
+    cpp: "cpp",
+    c: "c",
+    ruby: "ruby",
+    php: "php",
+    bash: "shell",
+    swift: "swift",
+    kotlin: "kotlin",
+    scala: "scala",
+    r: "r",
+    perl: "perl",
+    lua: "lua",
+    haskell: "haskell",
+    elixir: "elixir",
+    erlang: "erlang",
   };
   return map[lang.toLowerCase()] ?? "plaintext";
 }
@@ -99,6 +122,8 @@ export default function Room() {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  // flag to skip onChange when we apply a remote change
+  const isRemoteChange = useRef(false);
   // identity → cursor data
   const remoteCursors = useRef<Map<string, { line: number; column: number; color: string; name: string }>>(new Map());
   // pixel positions for overlay badges (React state so they re-render)
@@ -120,11 +145,18 @@ export default function Room() {
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Code runner
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [outputOpen, setOutputOpen] = useState(false);
+
   // Chat
   const [chatMessages, setChatMessages] = useState<{ user: WSUser; message: string; timestamp: string }[]>([]);
 
   // Session summary
   const [summary, setSummary] = useState<{ duration_seconds: number; files_modified: string[]; ai_summary: string } | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
 
   // Load room + files on mount
   useEffect(() => {
@@ -195,10 +227,23 @@ export default function Room() {
     } else if (event.type === "file_renamed") {
       setFiles(prev => prev.map(f => f.id === event.file_id ? { ...f, name: event.name } : f));
     } else if (event.type === "code_change") {
-      // delta is the full content from the other user
+      // update files state
       setFiles(prev => prev.map(f =>
         f.id === event.file_id ? { ...f, content: event.delta } : f
       ));
+      // if this file is currently open in Monaco, push content directly
+      if (activeFileRef.current?.id === event.file_id && editorRef.current) {
+        const editor = editorRef.current;
+        const currentValue = editor.getValue();
+        if (currentValue !== event.delta) {
+          isRemoteChange.current = true;
+          // preserve cursor position
+          const pos = editor.getPosition();
+          editor.setValue(event.delta);
+          if (pos) editor.setPosition(pos);
+          isRemoteChange.current = false;
+        }
+      }
     }
   };
 
@@ -251,6 +296,7 @@ export default function Room() {
   activeFileRef.current = activeFile;
 
   const handleCodeChange = useCallback((content: string) => {
+    if (isRemoteChange.current) return; // skip — this was triggered by remote setValue
     const file = activeFileRef.current;
     if (!file) return;
     setFiles(prev => prev.map(f => f.id === file.id ? { ...f, content } : f));
@@ -297,12 +343,37 @@ export default function Room() {
     }
   };
 
+  const handleRun = async () => {
+    if (!activeFile || !room) return;
+    setRunning(true);
+    setOutputOpen(true);
+    setRunResult(null);
+    try {
+      const result = await runCode(activeFile.content, room.language, activeFile.name);
+      setRunResult(result);
+    } catch (e: unknown) {
+      setRunResult({
+        stdout: "",
+        stderr: e instanceof Error ? e.message : "Failed to run code",
+        exit_code: 1,
+        language: room.language,
+        version: "",
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   const handleEndSession = async () => {
+    setSummaryLoading(true);
+    setSummaryError("");
     try {
       const s = await endSession(roomCode);
       setSummary(s);
-    } catch {
-      setLocation("/");
+    } catch (e: unknown) {
+      setSummaryError(e instanceof Error ? e.message : "Failed to generate summary");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -352,8 +423,8 @@ export default function Room() {
               {displayLang} <ChevronDown className="w-3 h-3" />
             </button>
             {langOpen && (
-              <div className="absolute right-0 top-full mt-1 w-28 z-50 overflow-hidden"
-                style={{ background: SURF, border: `1px solid ${BORDER}` }}>
+              <div className="absolute right-0 top-full mt-1 w-36 z-50 overflow-y-auto"
+                style={{ background: SURF, border: `1px solid ${BORDER}`, maxHeight: 280 }}>
                 {LANGS.map(l => (
                   <button key={l} onClick={() => handleLangChange(l.toLowerCase())}
                     className="w-full text-left px-3 py-2 text-xs hover:text-foreground transition-colors"
@@ -446,36 +517,49 @@ export default function Room() {
         </div>
 
         {/* EDITOR COLUMN */}
-        <div className="flex flex-col flex-1 min-w-0">
-          {/* File tabs */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+          {/* File tabs + Run button */}
           <div className="flex items-center h-9 shrink-0"
             style={{ background: SURF, borderBottom: `1px solid ${BORDER}` }}>
-            {files.slice(0, 3).map(f => {
-              const Icon = fileIcon(f.name);
-              return (
-                <button key={f.id} onClick={() => setActiveFileId(f.id)}
-                  className="flex items-center gap-1.5 px-4 h-full text-xs font-mono border-r transition-colors"
-                  style={{
-                    borderColor: BORDER,
-                    color: f.id === activeFileId ? TEXT : DIM,
-                    borderBottom: f.id === activeFileId ? `1px solid ${B}` : "1px solid transparent",
-                    background: f.id === activeFileId ? EDGE : "transparent",
-                  }}>
-                  <Icon className="w-3 h-3" />
-                  {f.name}
-                </button>
-              );
-            })}
+            <div className="flex items-center flex-1 overflow-hidden">
+              {files.slice(0, 3).map(f => {
+                const Icon = fileIcon(f.name);
+                return (
+                  <button key={f.id} onClick={() => setActiveFileId(f.id)}
+                    className="flex items-center gap-1.5 px-4 h-full text-xs font-mono border-r transition-colors shrink-0"
+                    style={{
+                      borderColor: BORDER,
+                      color: f.id === activeFileId ? TEXT : DIM,
+                      borderBottom: f.id === activeFileId ? `1px solid ${B}` : "1px solid transparent",
+                      background: f.id === activeFileId ? EDGE : "transparent",
+                    }}>
+                    <Icon className="w-3 h-3" />
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Run button */}
+            <button
+              onClick={handleRun}
+              disabled={running || !activeFile}
+              className="flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40 shrink-0"
+              style={{ background: "hsl(142 60% 45%)", color: "#fff" }}
+            >
+              {running
+                ? <><Square className="w-3 h-3" /> Running...</>
+                : <><Play className="w-3 h-3" /> Run</>}
+            </button>
           </div>
 
           {/* Code area — Monaco Editor */}
-          <div ref={editorContainerRef} className="flex-1 relative" style={{ background: EDGE }}>
+          <div ref={editorContainerRef} className="flex-1 relative min-h-0" style={{ background: EDGE }}>
             {activeFile ? (
               <>
                 <Editor
                   height="100%"
                   language={langToMonaco(lang)}
-                  value={activeFile.content}
+                  defaultValue={activeFile.content}
                   theme="vs-dark"
                   options={{
                     fontSize: 13,
@@ -490,6 +574,13 @@ export default function Room() {
                   }}
                   onMount={(editor) => {
                     editorRef.current = editor;
+                    // set correct content when switching files
+                    const content = activeFileRef.current?.content ?? "";
+                    if (editor.getValue() !== content) {
+                      isRemoteChange.current = true;
+                      editor.setValue(content);
+                      isRemoteChange.current = false;
+                    }
                     editor.onDidScrollChange(() => redrawCursors());
                     editor.onDidChangeCursorPosition(e => {
                       ws.sendCursorMove({
@@ -548,6 +639,77 @@ export default function Room() {
             )}
           </div>
 
+          {/* Output Panel */}
+          <AnimatePresence initial={false}>
+            {outputOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 180, opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="shrink-0 overflow-hidden flex flex-col"
+                style={{ background: EDGE, borderTop: `1px solid ${BORDER}` }}
+              >
+                {/* Output header */}
+                <div className="flex items-center justify-between px-4 h-8 shrink-0"
+                  style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-medium" style={{ color: DIM }}>OUTPUT</span>
+                    {runResult && (
+                      <>
+                        <span className="text-[10px] font-mono" style={{ color: DIM }}>
+                          {runResult.language} {runResult.version}
+                        </span>
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 font-mono"
+                          style={{
+                            background: runResult.exit_code === 0 ? "hsl(142 60% 45%)22" : "hsl(0 72% 55%)22",
+                            color: runResult.exit_code === 0 ? "hsl(142 60% 45%)" : "hsl(0 72% 55%)",
+                            border: `1px solid ${runResult.exit_code === 0 ? "hsl(142 60% 45%)" : "hsl(0 72% 55%)"}`,
+                          }}
+                        >
+                          exit {runResult.exit_code}
+                        </span>
+                      </>
+                    )}
+                    {running && (
+                      <span className="text-[10px] animate-pulse" style={{ color: "hsl(38 85% 55%)" }}>
+                        Running...
+                      </span>
+                    )}
+                  </div>
+                  <button onClick={() => setOutputOpen(false)} style={{ color: DIM }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Output content */}
+                <div className="flex-1 overflow-auto p-3 font-mono text-[12px] leading-5">
+                  {running && (
+                    <span style={{ color: DIM }}>Executing code...</span>
+                  )}
+                  {runResult && (
+                    <>
+                      {runResult.stdout && (
+                        <pre style={{ color: TEXT, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                          {runResult.stdout}
+                        </pre>
+                      )}
+                      {runResult.stderr && (
+                        <pre style={{ color: "hsl(0 72% 65%)", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                          {runResult.stderr}
+                        </pre>
+                      )}
+                      {!runResult.stdout && !runResult.stderr && (
+                        <span style={{ color: DIM }}>No output.</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Status bar */}
           <div className="flex items-center justify-between px-4 h-7 text-[11px] shrink-0"
             style={{ background: SURF, borderTop: `1px solid ${BORDER}`, color: DIM, fontFamily: "'JetBrains Mono', monospace" }}>
@@ -558,6 +720,14 @@ export default function Room() {
               <span>{aiMessages.filter(m => m.type === "error").length} errors</span>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setOutputOpen(v => !v)}
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
+                style={{ color: outputOpen ? B : DIM }}
+              >
+                {outputOpen ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                Output
+              </button>
               <span>UTF-8</span>
               <span style={{ color: B }}>{displayLang.toUpperCase()}</span>
             </div>
@@ -854,19 +1024,38 @@ export default function Room() {
               onClick={() => setEndOpen(false)} />
             <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="w-full max-w-xs p-6" style={{ background: SURF, border: `1px solid ${BORDER}` }}>
-                {summary ? (
+              <div className="w-full max-w-sm p-6" style={{ background: SURF, border: `1px solid ${BORDER}` }}>
+                {summaryLoading ? (
+                  <div className="flex flex-col items-center gap-3 py-6">
+                    <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: B, borderTopColor: "transparent" }} />
+                    <p className="text-xs" style={{ color: DIM }}>Generating session summary...</p>
+                  </div>
+                ) : summary ? (
                   <>
-                    <p className="font-medium text-sm mb-3">Session Summary</p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Duration: {Math.floor(summary.duration_seconds / 60)}m {summary.duration_seconds % 60}s
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Files: {summary.files_modified.join(", ") || "none"}
-                    </p>
-                    <p className="text-[11px] leading-relaxed mb-5" style={{ color: DIM }}>
+                    <p className="font-medium text-sm mb-4">Session Summary</p>
+                    <div className="flex gap-4 mb-3">
+                      <div className="text-xs" style={{ color: DIM }}>
+                        <span className="block text-[10px] uppercase tracking-wider mb-0.5">Duration</span>
+                        <span style={{ color: TEXT }}>{Math.floor(Math.abs(summary.duration_seconds) / 60)}m {Math.abs(summary.duration_seconds) % 60}s</span>
+                      </div>
+                      <div className="text-xs" style={{ color: DIM }}>
+                        <span className="block text-[10px] uppercase tracking-wider mb-0.5">Files</span>
+                        <span style={{ color: TEXT }}>{summary.files_modified.length || 0}</span>
+                      </div>
+                    </div>
+                    {summary.files_modified.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {summary.files_modified.map(f => (
+                          <span key={f} className="text-[10px] px-1.5 py-0.5 font-mono"
+                            style={{ background: `${B}18`, border: `1px solid ${B}30`, color: B }}>
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-[11px] leading-relaxed mb-5 whitespace-pre-wrap" style={{ color: DIM }}>
                       {summary.ai_summary}
-                    </p>
+                    </div>
                     <button onClick={() => setLocation("/")}
                       className="w-full py-2 text-xs font-medium"
                       style={{ background: B, color: BG }}>
@@ -879,12 +1068,18 @@ export default function Room() {
                       <LogOut className="w-4 h-4" style={{ color: "hsl(0 72% 55%)" }} />
                       <span className="font-medium text-sm">Leave session?</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-5">
+                    <p className="text-xs text-muted-foreground mb-4">
                       Your changes are auto-saved. Others can continue without you.
                     </p>
+                    {summaryError && (
+                      <p className="text-[11px] mb-3 px-2 py-1.5" style={{ color: "hsl(0 72% 65%)", background: "hsl(0 72% 55%)15", border: "1px solid hsl(0 72% 55%)30" }}>
+                        {summaryError}
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <button onClick={handleEndSession}
-                        className="flex-1 py-2 text-xs font-medium transition-opacity hover:opacity-80"
+                        disabled={summaryLoading}
+                        className="flex-1 py-2 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
                         style={{ background: "hsl(0 72% 55%)", color: "#fff" }}>
                         End & summarize
                       </button>

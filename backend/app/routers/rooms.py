@@ -66,11 +66,17 @@ async def end_session(code: str, db: AsyncSession = Depends(get_db)):
     files = (await db.execute(select(File).where(File.room_id == room.id))).scalars().all()
     file_data = [{"name": f.name, "content": f.content} for f in files]
 
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    duration = int((now - room.created_at.replace(tzinfo=timezone.utc)).total_seconds())
+    from datetime import datetime
+    now = datetime.now()  # local time — matches PostgreSQL func.now() on same machine
+    created = room.created_at
+    if created.tzinfo is not None:
+        created = created.replace(tzinfo=None)
+    duration = max(0, int((now - created).total_seconds()))
 
-    ai_summary = await summarize_session(file_data, duration)
+    try:
+        ai_summary = await summarize_session(file_data, duration)
+    except Exception as e:
+        ai_summary = f"Summary unavailable: {e}"
 
     room.is_active = False
     room.ended_at = now

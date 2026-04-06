@@ -113,3 +113,15 @@ export async function* askAIStream(
 // ── Voice ───────────────────────────────────────────────
 export const getVoiceToken = (room_code: string, display_name: string) =>
   req<{ token: string; livekit_url: string }>("POST", "/api/voice/token", { room_code, display_name });
+
+// ── Code Runner ─────────────────────────────────────────
+export interface RunResult {
+  stdout: string;
+  stderr: string;
+  exit_code: number;
+  language: string;
+  version: string;
+}
+
+export const runCode = (code: string, language: string, filename = "main") =>
+  req<RunResult>("POST", "/api/run", { code, language, filename });
